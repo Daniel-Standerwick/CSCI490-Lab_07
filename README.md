@@ -145,5 +145,206 @@ private void detachDatabaseReadListener() {
 
     }
 }
+
+~~~~~~~~~~~~~~~` Make sure this works before going further ~~~~~~~~~~~~~~~~
+Adding Authentication
+In the Firebase Console, go back to the 'Rules' tab of the Realtime Database.
+Change the rule back to the original setting
+{
+  /* Visit https://firebase.google.com/docs/database/security to learn more about security rules. */
+  "rules": {
+    ".read": "auth != null",
+    ".write": "auth != null"
+  }
+}
+Firebase simplifies the authentication steps by already providing different implementation depending on which types you choose to allow. These could be email/password, Facebook, Twitter, Google, Github, amoung others. FirebaseUI is a client that Google has created to seemlessly incorporate any that you choose.
+In Firebase Console click on the 'Authentication' tab.
+Click 'Set up sign-in method'.
+Click on and enable 'Email/password' and 'Google'.
+Navigate a browser tab to Firebase Auth Doc.
+Basic steps to add authenticating to our app
+Add dependencies.
+Add AuthStateListener.
+Send unauthenticated users to authentication flow.
+Sign in setup and sign out teardown.
+In Android Studio Change to the dependencies in your app/build.gradle file:
+implementation fileTree(dir: 'libs', include: ['*.jar'])
+implementation 'com.android.support.constraint:constraint-layout:1.1.3'
+    
+implementation 'com.android.support:design:27.0.2'
+    
+implementation 'com.android.support:appcompat-v7:27.0.2'
+implementation 'com.android.support:multidex:1.0.1'
+
+implementation 'com.google.firebase:firebase-core:11.8.0'
+implementation 'com.google.firebase:firebase-database:11.8.0'
+implementation 'com.google.firebase:firebase-auth:11.8.0'
+implementation 'com.google.firebase:firebase-storage:11.8.0'
+
+implementation 'com.firebaseui:firebase-ui-auth:3.2.2'
+
+// Displaying images
+implementation 'com.github.bumptech.glide:glide:3.6.1'
+
+testImplementation 'junit:junit:4.12'
+androidTestImplementation 'com.android.support.test:runner:1.0.2'
+androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+
+Once the libraries are added, we are ready to start coding. The app will now have two states, signed in and signed out. We need a way to determine which state our app is in. An AuthStateListener reacts to auth state changes.
+
+Add a FirebaseAuth and FirebaseAuth.AuthStateListener as member variables to MainActivity.java.
+private FirebaseAuth mFirebaseAuth;
+private FirebaseAuth.AuthStateListener mAuthStateListener;
+In onCreate() directly under where you instantiate the Firebase Database, instantiate the FirebaseAuth object.
+
+mFirebaseAuth = FirebaseAuth.getInstance();
+At the end of onCreate() instantiate the AuthStateListner. As with other interfaces you have implemented on the fly, let the IDE do the work by auto completing.
+
+mAuthStateListener = new Auth.... press Enter.
+@Override onPause() and onResume() methods.
+on mFirebaseAuth object add the mAuthStateListener in the onResume() and remove the listener in the onPause().
+We need to add some functionality to the AuthStateListener. In the onAuthStateChanged()
+FirebaseUser user = firebaseAuth.getCurrentUser();
+ if(user != null) {
+     // user is signed in
+
+ } else {
+     // user is signed out
+     startActivityForResult(
+             AuthUI.getInstance()
+                     .createSignInIntentBuilder()
+                     .setAvailableProviders(Arrays.asList(
+                             new AuthUI.IdpConfig.GoogleBuilder().build()))
+                     .build(),
+             RC_SIGN_IN);
+ }
+Add the RC_SIGN_IN constant for startActivityForResult() method.
+public static final int RC_SIGN_IN = 1;
+Add a Toast message in the if block
+Toast.makeText(getApplicationContext(), "Signed in!", Toast.LENGTH_SHORT).show();
+Test the app to ensure you can at least log in
+Create two private void methods onSignedInInitialize(String username) and onSignedOutCleanup()
+private void onSignedInInitialize(String username) {
+        
+}
+    
+private void onSignedOutCleanup() {
+        
+}
+
+Inside the onSignedInIntialize() method, set mUsername to the username that is passed in.
+Move the line that calls attachDatabaseReadListener() to inside onSignedInIntialize() The app now attaches the database listener after the user has authenticated. Test the app and make sure that a test message now displays who sent it.
+Create a method to detach the DatabaseListener.
+private void detachDatabaseReadListener() {
+    if(mChildEventListner != null) {
+        mMessagesDatabaseReference.removeEventListener(mChildEventListner);
+        mChildEventListner = null;
+
+    }
+}
+Inside the onSignedOutCleanup() set mUsername to ANONYMOUS, clear the message adapter, and call the detachDatabaseListener()
+@Override onResume() and call attachDatabaseReadListener().
+@Override onPause() and call detachDatabaseListener().
+@Override
+protected void onPause() {
+   super.onPause();
+   if(mAuthStateListener == null) {
+      mFirebaseAuth.removeAuthStateListener(mAuthStateListener);
+   }
+   detachDatabaseReadListener();
+   mMessageAdapter.clear();
+}
+
+@Override
+protected void onResume() {
+   super.onResume();
+   mFirebaseAuth.addAuthStateListener(mAuthStateListener);
+}
+You might notice that there is a menu item for Signing out. You can write the code for this by @Overriding the onOptionsItemSelected(MenuItem item) method.
+
+@Override
+public boolean onOptionsItemSelected(MenuItem item) {
+   switch (item.getItemId()) {
+      case R.id.sign_out_menu:
+          // sign out
+          AuthUI.getInstance().signOut(this);
+          return true;
+      default:
+          return super.onOptionsItemSelected(item);
+   }
+
+}
+You may notice there is a slight bug. Once the user is logged out, there is no way to back out of the app. A slightly less buggy fix for this:
+
+@Override
+protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+   super.onActivityResult(requestCode, resultCode, data);
+
+   if(requestCode == RC_SIGN_IN) {
+      if(resultCode == RESULT_OK) {
+          Toast.makeText(getApplicationContext(), "Signed in!", Toast.LENGTH_SHORT).show();
+      } else if(resultCode == RESULT_CANCELED) {
+          Toast.makeText(getApplicationContext(), "Cancelled!", Toast.LENGTH_SHORT).show();
+          finish();
+      }
+   }
+}
+File Storage
+In Firebase Console, click on the 'Storage' tab.
+Click 'Get Started'.
+Add a folder called chat_photos
+In Android Studio, set up the image picker
+// ImagePickerButton shows an image picker to upload a image for a message
+mPhotoPickerButton.setOnClickListener(new View.OnClickListener() {
+   @Override
+   public void onClick(View view) {
+       Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+       intent.setType("image/jpeg");
+       intent.putExtra(Intent.EXTRA_LOCAL_ONLY, true);
+       startActivityForResult(Intent.createChooser(intent, "Complete action using"), RC_PHOTO_PICKER);
+   }
+});
+Under the 'RC_SIGN_IN' int, create 'RC_PHOTO_PICKER'
+private static final int RC_PHOTO_PICKER =  2; 
+Create a member variable called FirebaseStorage mFirebaseStorage and instantiate it like you did FirebaseAuth and FirebaseDatabase.
+Create a member variable called StorageReference mChatPhotosStorageReference and instantiate it like you did the DatabaseReference but pass in the folder you created in Firebase Console.
+Add an else if to the onActivityResult() method.
+else if(requestCode == RC_PHOTO_PICKER && resultCode == RESULT_OK ) {
+
+}
+This is where we will handle what to do after the user chooses a picture. The URI will come in as data.getData()
+
+Inside the else if block you just created, you will need three lines of code. One to get the URI, one to get a reference to the the file location we will be putting the file into, and lastly to put the file in Firebase.
+Uri selectedURI = data.getData();
+            
+// Get a reference to store file in chat_photos/<filename>
+StorageReference photoReference = mChatPhotosStorageReference.child(selectedURI.getLastPathSegment());
+
+// Put file in Firebase
+photoReference.putFile(selectedURI);
+Finally, we need to add a SuccessListner to the file push. This will grab the download URL and send it to the messages database and allow the image to be shown.
+
+Modify the putFile as follows:
+// Put file in Firebase
+photoReference.putFile(selectedURI).addOnSuccessListener(new OnSuccessListener<UploadTask.TaskSnapshot>() {
+    @Override
+    public void onSuccess(UploadTask.TaskSnapshot taskSnapshot) {
+        Uri downloadUrl = taskSnapshot.getDownloadUrl();
+
+        FriendlyMessage message = new FriendlyMessage(null, mUsername, downloadUrl.toString());
+        mMessagesDatabaseReference.push().setValue(message);
+    }
+});
+You will need to download a photo from web on virtual devices, but you can now test the functionality
+
+Firebase Messaging
+Add Firebase Messaging dependency and Sync
+implementation 'com.google.firebase:firebase-messaging:11.8.0'
+Ensure app is not in Foreground.
+In the Firebase Console, click on the Cloud Messaging tab.
+Click on 'Send your first message'.
+Fill in a Notification and click 'Next'
+Target 'edu.cofc.briggs.myapplication'.
+
 ````
     
