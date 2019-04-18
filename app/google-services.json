@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "534928523851",
+    "firebase_url": "https://csci490lab07-99152.firebaseio.com",
+    "project_id": "csci490lab07-99152",
+    "storage_bucket": "csci490lab07-99152.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:534928523851:android:105acea9f6dfa91f",
+        "android_client_info": {
+          "package_name": "edu.cofc.briggs.myapplication"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "534928523851-kbkj2p8jhr12lbe867e8an10tkc84285.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCMA0gWq9iEgbfuCkZSaZRDXQKyRlnUJWw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "534928523851-kbkj2p8jhr12lbe867e8an10tkc84285.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
